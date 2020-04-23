@@ -210,7 +210,6 @@ impl SideState {
         self.all |= to_add;
     }
 
-
     pub fn remove_bit(&mut self, to_remove: BBoard) -> Option<Piece> {
         let inv = !to_remove;
 
