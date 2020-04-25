@@ -158,7 +158,7 @@ impl Demo for Scores {
     }
 }
 
-pub fn evaluate_position(state: &GameState) -> i32 {
+pub fn evaluate_position(state: &ChessState) -> i32 {
     let mut w = 0i32;
     let mut b = 0i32;
 

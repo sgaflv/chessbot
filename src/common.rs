@@ -1,4 +1,5 @@
 use crate::bboard::*;
+use crate::state::{Side, Piece};
 
 
 #[inline]
@@ -17,6 +18,40 @@ pub fn has_bit(board: &BBoard, x: u32, y: u32) -> bool {
 
     return (*board & (1u64 << (x + y * 8) as u64)) > 0;
 }
+
+/// return tuple with bitboards:
+/// king, rook, empty, no_attack, king_move, rook_move
+#[inline]
+pub fn castle_tuple_k_r_e_na_km_rm(side: Side, castle_type: Piece) -> (BBoard, BBoard, BBoard, BBoard, BBoard, BBoard) {
+
+    let w_k = (0b10000u64, 0b10000000u64, 0b1100000u64, 0b1110000u64, 0b1010000u64, 0b10100000u64);
+    let w_q = (0b10000u64, 0b1u64, 0b1110u64, 0b11100u64, 0b10100u64, 0b1001u64);
+
+    let b_k = (0b1000u64.reverse_bits(), 0b1u64.reverse_bits(), 0b110u64.reverse_bits(), 0b1110u64.reverse_bits(), 0b1010u64.reverse_bits(), 0b101u64.reverse_bits());
+    let b_q = (0b1000u64.reverse_bits(), 0b10000000u64.reverse_bits(), 0b1110000u64.reverse_bits(), 0b111000u64.reverse_bits(), 0b101000u64.reverse_bits(), 0b10010000u64.reverse_bits());
+
+    let result =
+        match side {
+            Side::White => {
+                match castle_type {
+                    Piece::King => w_k,
+                    Piece::Queen => w_q,
+                    _ => panic!()
+                }},
+
+            Side::Black => {
+                match castle_type {
+                    Piece::King => b_k,
+                    Piece::Queen => b_q,
+                    _ => panic!()
+                }},
+        };
+
+    result
+}
+
+
+
 
 
 #[cfg(test)]

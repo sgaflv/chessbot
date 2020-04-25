@@ -21,6 +21,7 @@ pub fn bb_coord(x: i32, y: i32) -> BBoard {
     1u64 << (y * 8 + x) as u64
 }
 
+
 pub fn bb_coord_q(x: i32, y: i32) -> BBoard {
     if x > 7 || x < 0 {
         return 0
