@@ -190,20 +190,19 @@ pub fn evaluate_position(state: &ChessState) -> i32 {
     b += position_to_score(&B_KNIGHT, bside.get_board(Piece::Knight));
     b += position_to_score(&B_QUEEN, bside.get_board(Piece::Queen));
     b += position_to_score(&B_ROOK, bside.get_board(Piece::Rook));
-    if is_end_game {
-        b += position_to_score(&B_KING_END, bside.get_board(Piece::King));
-    } else {
-        b += position_to_score(&B_KING, bside.get_board(Piece::King));
-    }
+
 
     w += position_to_score(&W_PAWN, wside.get_board(Piece::Pawn));
     w += position_to_score(&W_BISHOP, wside.get_board(Piece::Bishop));
     w += position_to_score(&W_KNIGHT, wside.get_board(Piece::Knight));
     w += position_to_score(&W_QUEEN, wside.get_board(Piece::Queen));
     w += position_to_score(&W_ROOK, wside.get_board(Piece::Rook));
+
     if is_end_game {
+        b += position_to_score(&B_KING_END, bside.get_board(Piece::King));
         w += position_to_score(&W_KING_END, wside.get_board(Piece::King));
     } else {
+        b += position_to_score(&B_KING, bside.get_board(Piece::King));
         w += position_to_score(&W_KING, wside.get_board(Piece::King));
     }
 

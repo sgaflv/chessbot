@@ -175,7 +175,7 @@ impl MoveGenerator {
     }
 
     #[inline]
-    fn is_king_hit(&self, state: &ChessState, side: Side) -> bool {
+    pub fn is_king_hit(&self, state: &ChessState, side: Side) -> bool {
 
         debug_assert!(state.get_side_state(side).boards[Piece::King.idx()] > 0);
 

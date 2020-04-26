@@ -118,6 +118,13 @@ impl Side {
         *self as i32
     }
 
+    pub fn value(&self) -> i32 {
+        match self {
+            Side::White => 1,
+            Side::Black => -1,
+        }
+    }
+
     pub fn opposite(&self) -> Side {
         match self {
             Side::White => Side::Black,
@@ -623,8 +630,6 @@ impl ChessState {
             }
         }
 
-
-
         ChessMove::Normal {
             side: next_to_move,
             role,
@@ -791,7 +796,7 @@ mod tests {
     }
 
 
-        #[test]
+    #[test]
     fn test_enum_index() {
         let a = Piece::Queen;
         println!("{}", a.idx());
