@@ -5,7 +5,8 @@ use crate::state::{Side, Piece, ChessState};
 use std::num::Wrapping;
 use std::rc::Rc;
 use crate::magic::Magic;
-use crate::common::castle_tuple_k_r_e_na_km_rm;
+use crate::common::{castle_tuple_k_r_e_na_km_rm, update_castles};
+use crate::game_setup::ChessMove;
 
 pub struct MoveGenerator {
     move_provider: Rc<PieceMoveProvider>,
@@ -24,24 +25,18 @@ impl MoveGenerator {
         }
     }
 
-    fn fill_pawn_moves(&self, state: &ChessState, moves: &mut Vec<ChessState>, move_from: BBoard, move_candidates: BBoard) {
+    fn fill_pawn_moves(&self, old_state: &ChessState, moves: &mut Vec<ChessState>, move_from: BBoard, move_candidates: BBoard) {
         let mut move_candidates = move_candidates;
-        let next_to_move = state.next_to_move;
+        let next_to_move = old_state.next_to_move;
 
         while move_candidates > 0 {
             let move_to = move_candidates & (-Wrapping(move_candidates)).0;
 
             let move_delta =  move_from | move_to;
 
-            let mut new_state: ChessState = (*state).clone();
-            if state.next_to_move == Side::White {
-                new_state.full_move_count += 1;
-            }
-            // for any pawn movement the half-move count is reduced
+            let mut new_state: ChessState = (*old_state).init_next_move();
             new_state.half_move_count = 0;
 
-            new_state.next_to_move = state.next_to_move.opposite();
-            new_state.en_passant = 0;
             let mut en_passant = 0u64;
 
             let (side_state, other_state) = new_state.get_mut_sides_state(next_to_move);
@@ -50,8 +45,8 @@ impl MoveGenerator {
             side_state.all ^= move_delta;
 
             // en-passant capture
-            if move_to & (*state).en_passant > 0 {
-                if (*state).en_passant < (1u64 << 32) {
+            if move_to & (*old_state).en_passant > 0 {
+                if (*old_state).en_passant < (1u64 << 32) {
                     other_state.remove_bit(move_to << 8);
                 } else {
                     other_state.remove_bit(move_to >> 8);
@@ -75,7 +70,7 @@ impl MoveGenerator {
 
                     if let Some(piece) = removed {
                         if piece == Piece::Rook {
-                            self.update_castles(&mut new_state, next_to_move.opposite());
+                            update_castles(&mut new_state, next_to_move.opposite());
                         }
                     }
 
@@ -83,9 +78,9 @@ impl MoveGenerator {
                     *(board) ^= move_to;
 
                     if !self.is_king_hit(&new_state, next_to_move) {
-                        self.update_castles(&mut new_state, next_to_move);
+                        update_castles(&mut new_state, next_to_move);
 
-                        debug_assert!(state_is_sane(state, &new_state));
+                        debug_assert!(state_is_sane(old_state, &new_state));
                         moves.push(new_state);
                     }
                 }
@@ -98,48 +93,15 @@ impl MoveGenerator {
 
                 new_state.en_passant = en_passant;
                 if !self.is_king_hit(&new_state, next_to_move) {
-                    self.update_castles(&mut new_state, next_to_move);
+                    update_castles(&mut new_state, next_to_move);
 
-                    debug_assert!(state_is_sane(state, &new_state));
+                    debug_assert!(state_is_sane(old_state, &new_state));
                     moves.push(new_state);
                 }
             }
 
             move_candidates ^= move_to;
         }
-    }
-
-    fn update_castles(&self, state: &mut ChessState, side: Side) {
-        let side_state = state.get_mut_side_state(side);
-
-        if side_state.king_side_castle {
-            let (king_b, rook_b, _, _, _, _) = castle_tuple_k_r_e_na_km_rm(side, Piece::King);
-
-            if side_state.get_board(Piece::King) & king_b == 0 {
-                side_state.king_side_castle = false;
-                side_state.queen_side_castle = false;
-                return
-            }
-
-            if side_state.get_board(Piece::Rook) & rook_b == 0 {
-                side_state.king_side_castle = false;
-            }
-        }
-
-        if side_state.queen_side_castle {
-            let (king_b, rook_b, _, _, _, _) = castle_tuple_k_r_e_na_km_rm(side, Piece::Queen);
-
-            if side_state.get_board(Piece::King) & king_b == 0 {
-                side_state.king_side_castle = false;
-                side_state.queen_side_castle = false;
-                return
-            }
-
-            if side_state.get_board(Piece::Rook) & rook_b == 0 {
-                side_state.queen_side_castle = false;
-            }
-        };
-
     }
 
     fn fill_rbqn_moves(&self, state: &ChessState, moves: &mut Vec<ChessState>, piece: Piece, move_from: BBoard, move_candidates: BBoard) {
@@ -151,14 +113,7 @@ impl MoveGenerator {
 
             let move_delta =  move_from | move_to;
 
-            let mut new_state: ChessState = (*state).clone();
-            if state.next_to_move == Side::White {
-                new_state.full_move_count += 1;
-            }
-            new_state.half_move_count += 1;
-
-            new_state.next_to_move = state.next_to_move.opposite();
-            new_state.en_passant = 0u64;
+            let mut new_state: ChessState = (*state).init_next_move();
 
             let (side_state, other_state) = new_state.get_mut_sides_state(next_to_move);
 
@@ -169,12 +124,12 @@ impl MoveGenerator {
                 new_state.half_move_count = 0;
 
                 if piece == Piece::Rook {
-                    self.update_castles(&mut new_state, next_to_move.opposite());
+                    update_castles(&mut new_state, next_to_move.opposite());
                 }
             }
 
             if !self.is_king_hit(&new_state, next_to_move) {
-                self.update_castles(&mut new_state, next_to_move);
+                update_castles(&mut new_state, next_to_move);
 
                 debug_assert!(state_is_sane(&state, &new_state));
                 moves.push(new_state);
@@ -204,14 +159,7 @@ impl MoveGenerator {
 
         if empty & all == 0 && !self.is_any_hit(state, side, no_attack) {
 
-            let mut new_state = state.clone();
-            new_state.next_to_move = state.next_to_move.opposite();
-            if state.next_to_move == Side::White {
-                new_state.full_move_count += 1;
-            }
-            new_state.half_move_count += 1;
-
-            new_state.en_passant = 0u64;
+            let mut new_state = state.init_next_move();
 
             let side_state = new_state.get_mut_side_state(side);
 
@@ -253,7 +201,6 @@ impl MoveGenerator {
 
         false
     }
-
 
     #[inline]
     fn is_hit(&self, state: &ChessState, side: Side, idx: usize) -> bool {
@@ -298,6 +245,22 @@ impl MoveGenerator {
         }
 
         false
+    }
+
+    /// Function generates all possible moves and returns them as a vector
+    /// of ChessMove objects
+    pub fn generate_moves2(&self, state: &ChessState) -> Vec<ChessMove> {
+        let mut result = Vec::new();
+        let mut move_states: Vec<ChessState> = Vec::new();
+
+        self.generate_moves(state, &mut move_states);
+
+        for s in move_states.iter() {
+            let chess_move = state.get_move(s);
+            result.push(chess_move);
+        }
+
+        result
     }
 
     /// Function generates all possible moves from a given position, and fills them
@@ -455,8 +418,6 @@ pub fn get_move_text(state_from: &ChessState, state_to: &ChessState) -> String {
     result
 }
 
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -471,7 +432,27 @@ mod tests {
         let mut result = 0;
 
         let mut new_moves: Vec<ChessState> = Vec::new();
+
         move_generator.generate_moves(state, &mut new_moves);
+
+        let chess_moves = move_generator.generate_moves2(state);
+
+        for (idx, cm) in chess_moves.iter().enumerate() {
+
+            let initial = new_moves.get(idx).unwrap();
+            let mut alternative = state.clone();
+            alternative.do_move(cm);
+
+            if !initial.eq(&alternative) {
+                println!("Failed match for move: {:?}", cm);
+                println!("Initial state:");
+                state.demo();
+
+                println!("Expected state: {:?}", initial);
+                println!("Found state:    {:?}", alternative);
+                panic!();
+            }
+        }
 
         for m in new_moves.iter() {
             result += perft_recursion(move_generator, depth - 1, m);
@@ -520,7 +501,7 @@ mod tests {
     fn test_moves() {
         // https://www.chessprogramming.org/Perft_Results
         // initial position
-        perft_tests("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", &[20, 400, 8902, 197281, 4865609, 119060324]);
+        //perft_tests("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", &[20, 400, 8902, 197281, 4865609, 119060324]);
 
         // position 2
         perft_tests("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -", &[48, 2039, 97862, 4085603, 193690690]);
@@ -542,7 +523,7 @@ mod tests {
 
     #[test]
     fn test_some_moves() {
-        let state = ChessState::from_fen("rr2k2r/p6p/8/8/8/8/P6P/R3K2R w KQkq -");
+        let state = ChessState::from_fen("r3k1B1/8/3b4/p1pPNR1n/2P5/2N4P/PP5P/R2Q2K1 b q - 0 1");
 
 //        let state = GameState::from_fen("r3k2r/p1pp1pb1/bn2pnp1/3PN3/1q2P3/P1N2Q1p/2PBBPPP/R3K2R w KQkq -");
 //        let state = GameState::from_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q2/PPPBBPpP/1R2K2R w Qkq -");
@@ -574,6 +555,8 @@ mod tests {
 #[inline]
 fn state_is_sane(old_state: &ChessState, state: &ChessState) -> bool {
 
+
+
     let all = state.white_state.all | state.black_state.all | state.en_passant;
 
     let boards = [state.white_state.get_board(Piece::Pawn),
@@ -590,8 +573,8 @@ fn state_is_sane(old_state: &ChessState, state: &ChessState) -> bool {
         state.black_state.get_board(Piece::Queen),
         state.black_state.get_board(Piece::King)];
 
-    if (state.next_to_move == Side::White && state.en_passant < 0x1u64 << 32) ||
-        (state.next_to_move == Side::Black && state.en_passant > 0x1u64 << 32)
+    if state.en_passant > 0 && ((state.next_to_move == Side::White && state.en_passant < 0x1u64 << 32) ||
+        (state.next_to_move == Side::Black && state.en_passant > 0x1u64 << 32))
         {
 
         println!("Impossible en-passant state:");

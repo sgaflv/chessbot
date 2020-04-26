@@ -14,10 +14,10 @@ pub fn remove_last_bit(b: BBoard) -> BBoard {
     b & (b - 1)
 }
 
-pub fn bb_coord(x: i32, y: i32) -> BBoard {
+pub fn bb_coord(x: u8, y: u8) -> BBoard {
 
-    assert!(x < 8 && x >= 0);
-    assert!(y < 8 && y >= 0);
+    assert!(x < 8);
+    assert!(y < 8);
     1u64 << (y * 8 + x) as u64
 }
 

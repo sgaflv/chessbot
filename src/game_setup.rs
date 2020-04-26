@@ -8,12 +8,13 @@ use std::num::Wrapping;
 
 #[derive(Eq, PartialEq, Debug, Clone, Copy)]
 pub struct ChessCoord {
-    x: u8,
-    y: u8,
+    pub x: u8,
+    pub y: u8,
 }
 
 impl ChessCoord {
     pub fn new(x: u8, y: u8) -> ChessCoord {
+
         ChessCoord {
             x, y
         }
@@ -39,12 +40,17 @@ impl ChessCoord {
 
     #[inline]
     pub fn as_bboard(&self) -> BBoard {
+
         1u64 << self.idx() as u64
     }
 
     #[inline]
     pub fn from_bboard(board: BBoard) -> ChessCoord {
         let idx = board.trailing_zeros();
+
+        if idx > 63 {
+            panic!();
+        }
 
         ChessCoord {
             x: (idx % 8) as u8,
@@ -83,29 +89,12 @@ impl ChessMove {
         let move_from_b = move_from.as_bboard();
         let move_to_b = move_to.as_bboard();
 
-        if move_to_b == curr_state.en_passant {
-
-            let captured = if curr_state.en_passant < 1u64 << 32 {
-                curr_state.en_passant << 8u64
-            } else {
-                curr_state.en_passant >> 8u64
-            };
-
-            return Ok(ChessMove::EnPassantCapture {
-                side,
-                move_from,
-                move_to,
-                captured: ChessCoord::from_bboard(captured),
-            });
-        }
-
         let this_side_state = curr_state.get_side_state(side);
         let other_side_state = curr_state.get_side_state(side.opposite());
         let mut role: Option<Piece> = None;
         let mut capture: Option<Piece> = None;
 
         let mut is_castle = false;
-
 
         for p in Piece::values().iter() {
             let own_board = move_from_b & this_side_state.get_board(*p);
@@ -133,6 +122,25 @@ impl ChessMove {
             return Err(msg);
         }
 
+        let role = role.unwrap();
+
+        if role == Piece::Pawn && move_to_b == curr_state.en_passant {
+
+            let captured = if curr_state.en_passant < 1u64 << 32 {
+                curr_state.en_passant << 8u64
+            } else {
+                curr_state.en_passant >> 8u64
+            };
+
+            return Ok(ChessMove::EnPassantCapture {
+                side,
+                move_from,
+                move_to,
+                captured: ChessCoord::from_bboard(captured),
+            });
+        }
+
+
         if is_castle {
 
             let castle_side = if move_from_b < move_to_b {
@@ -155,8 +163,6 @@ impl ChessMove {
             });
         }
 
-        let role = role.unwrap();
-
         Ok(ChessMove::Normal {
             side,
             role,
@@ -171,11 +177,11 @@ impl ChessMove {
         let mut result = String::with_capacity(4);
 
         match self {
-            ChessMove::Normal{ move_from: from, move_to: to, capture, ..} => {
+            ChessMove::Normal{ move_from: from, move_to: to, promote, ..} => {
                 result.push_str(from.to_string().as_str());
                 result.push_str(to.to_string().as_str());
-                if let Some(captured) = capture {
-                    result.push(captured.to_char(Side::Black));
+                if let Some(promoted) = promote {
+                    result.push(promoted.to_char(Side::Black));
                 }
             }
             ChessMove::Castle { king_from: from, king_to: to, ..} => {

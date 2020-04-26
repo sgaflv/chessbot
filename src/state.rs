@@ -1,17 +1,17 @@
 
 use crate::bboard::*;
-use crate::common::{add_bit, castle_tuple_k_r_e_na_km_rm};
+use crate::common::{add_bit, castle_tuple_k_r_e_na_km_rm, update_castles};
 use crate::debug::Demo;
 use std::fmt::Formatter;
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 pub enum Piece {
+    King,
     Pawn,
     Rook,
     Knight,
     Bishop,
     Queen,
-    King,
 }
 
 pub static PIECES: [Piece; 6] = [Piece::King, Piece::Pawn, Piece::Rook, Piece::Knight,Piece::Bishop, Piece::Queen];
@@ -274,12 +274,25 @@ impl ChessState {
             white_state: SideState::new(),
             black_state: SideState::new(),
             half_move_count: 0,
-            full_move_count: 1,
+            full_move_count: 0,
         }
     }
 
     pub fn new_game() -> ChessState {
         ChessState::from_fen(INITIAL_BOARD)
+    }
+
+    pub fn init_next_move(&self) -> ChessState {
+        let mut new_state = self.clone();
+
+        new_state.next_to_move = self.next_to_move.opposite();
+        new_state.en_passant = 0u64;
+        if new_state.next_to_move == Side::White {
+            new_state.full_move_count += 1;
+        }
+        new_state.half_move_count += 1;
+
+        new_state
     }
 
     pub fn get_mut_side_state(&mut self, side: Side) -> &mut SideState {
@@ -471,8 +484,8 @@ impl ChessState {
                 }
             }
 
-            state.get_mut_side_state(Side::White).set_castle_state((wk,wq));
-            state.get_mut_side_state(Side::Black).set_castle_state((bk,bq));
+            state.get_mut_side_state(Side::White).set_castle_state((wk, wq));
+            state.get_mut_side_state(Side::Black).set_castle_state((bk, bq));
 
         }
 
@@ -502,6 +515,7 @@ impl ChessState {
     }
 
     pub fn get_move(&self, new_state: &ChessState) -> ChessMove {
+
         let next_to_move = self.next_to_move;
 
         let old_this = self.get_side_state(next_to_move);
@@ -511,7 +525,10 @@ impl ChessState {
 
         let mut captured: Option<Piece> = None;
         let mut move_from: BBoard = 0;
+
         let mut move_to: BBoard = 0;
+        let mut promote_to: Option<Piece> = None;
+
         let mut role: Option<Piece> = None;
 
         let mut is_castle = false;
@@ -526,10 +543,17 @@ impl ChessState {
                 is_castle = true;
             }
 
-            if delta.count_ones() == 2 {
-                move_from = old_board & delta;
-                move_to = new_board & delta;
-                role = Some(*p);
+            if delta.count_ones() > 0 {
+
+                if old_board & delta > 0 {
+                    move_from = old_board & delta;
+                    role = Some(*p);
+                }
+
+                if new_board & delta > 0  {
+                    move_to = new_board & delta;
+                    promote_to = Some(*p);
+                }
             }
 
             let old_other_board = old_other.get_board(*p);
@@ -540,14 +564,25 @@ impl ChessState {
             }
         }
 
+        if promote_to == role {
+            promote_to = None;
+        }
+
         if move_from == 0 || move_to == 0 {
             send_message("# Could not find the moving piece. Engine in panic!");
+
+            println!("========found -> new ===============");
+            self.demo();
+            new_state.demo();
+
+            println!("=======================");
+
             panic!();
         }
 
         if is_castle {
 
-            let castle_side = if move_from < move_to {
+            let castle_side = if move_from > move_to {
                 Piece::King
             } else {
                 Piece::Queen
@@ -558,16 +593,21 @@ impl ChessState {
             let king_to = king_from ^ king_move;
             let rook_to = rook_from ^ rook_move;
 
-            return ChessMove::Castle {
+            let result = ChessMove::Castle {
                 side: next_to_move,
                 king_from: ChessCoord::from_bboard(king_from),
                 king_to: ChessCoord::from_bboard(king_to),
                 rook_from: ChessCoord::from_bboard(rook_from),
                 rook_to: ChessCoord::from_bboard(rook_to),
             };
+
+
+            return result
         }
 
-        if move_to == self.en_passant {
+        let role = role.unwrap();
+
+        if role == Piece::Pawn && move_to == self.en_passant {
 
             let captured = if self.en_passant < 1u64 << 32 {
                 self.en_passant << 8u64
@@ -583,24 +623,33 @@ impl ChessState {
             }
         }
 
+
+
         ChessMove::Normal {
             side: next_to_move,
-            role: role.unwrap(),
+            role,
             move_from: ChessCoord::from_bboard(move_from),
             move_to: ChessCoord::from_bboard(move_to),
-            promote: None,
+            promote: promote_to,
             capture: captured
         }
     }
 
     /// Mutate object state to a new value based on a move provided
-    pub fn do_move(&mut self, chess_move: &ChessMove ) {
+    pub fn do_move(&mut self, chess_move: &ChessMove) {
 
-        let mut new_state = self.clone();
-        new_state.next_to_move = self.next_to_move.opposite();
+        let mut new_state = self.init_next_move();
 
         match chess_move {
             ChessMove::Normal { side, role, move_from, move_to, promote, capture } => {
+
+                if *role == Piece::Pawn || capture.is_some(){
+                    new_state.half_move_count = 0;
+                }
+
+                if *role == Piece::Pawn && ((*move_from).y + 2 == (*move_to).y || (*move_from).y == (*move_to).y + 2) {
+                    new_state.en_passant = bb_coord((*move_from).x, ((*move_from).y + (*move_to).y) / 2);
+                }
 
                 let (mut side1, mut side2) = new_state.get_mut_sides_state(*side);
 
@@ -609,8 +658,6 @@ impl ChessState {
                 *board ^= move_from.as_bboard();
 
                 if let Some(captured) = capture {
-                    info!("capture {:?}", capture);
-
                     let b_captured = side2.get_mut_board(*captured);
                     *b_captured &= !move_to.as_bboard();
                     side2.all &= !move_to.as_bboard();
@@ -643,6 +690,7 @@ impl ChessState {
             },
             ChessMove::EnPassantCapture { side, move_from, move_to, captured } => {
 
+                new_state.half_move_count = 0;
                 let (mut side1, mut side2) = new_state.get_mut_sides_state(*side);
                 let pawns1: &mut BBoard = side1.get_mut_board(Piece::Pawn);
                 let pawns2: &mut BBoard = side2.get_mut_board(Piece::Pawn);
@@ -656,6 +704,9 @@ impl ChessState {
                 side2.all ^= pawn_capture;
             },
         }
+
+        update_castles(&mut new_state,  self.next_to_move);
+        update_castles(&mut new_state,  self.next_to_move.opposite());
 
         *self = new_state;
     }
@@ -708,11 +759,12 @@ mod tests {
     #[test]
     fn test_equal_states() {
         let state1 = ChessState::new_game();
-        let state2 = ChessState::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq");
+        let state2 = ChessState::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
         let state3 = ChessState::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w Qkq - 0 1");
         let state4 = ChessState::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1");
         let state5 = ChessState::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPP1/RNBQKBNR w KQkq - 0 1");
         let state6 = ChessState::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq a3 0 1");
+        let state7 = ChessState::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 2");
 
         assert_eq!(state1, state2);
         assert_ne!(state2, state3);
@@ -720,6 +772,7 @@ mod tests {
         assert_ne!(state1, state4);
         assert_ne!(state1, state5);
         assert_ne!(state1, state6);
+        assert_ne!(state1, state7);
     }
 
     #[test]
