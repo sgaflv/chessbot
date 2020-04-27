@@ -45,12 +45,15 @@ impl PieceMoveProvider {
 }
 
 /* helpful boards */
-static LEFT_BORDER: BBoard   = 0x0101010101010101u64;
-static RIGHT_BORDER: BBoard  = 0x8080808080808080u64;
-static TOP_BORDER: BBoard    = 0xff00000000000000u64;
+static LEFT_BORDER: BBoard = 0x0101010101010101u64;
+static RIGHT_BORDER: BBoard = 0x8080808080808080u64;
+static TOP_BORDER: BBoard = 0xff00000000000000u64;
 static BOTTOM_BORDER: BBoard = 0x00000000000000ffu64;
 
-fn inner_bits(bishop_moves: &[BBoard; 64], rook_moves: &[BBoard; 64]) -> ([BBoard; 64], [BBoard; 64]) {
+fn inner_bits(
+    bishop_moves: &[BBoard; 64],
+    rook_moves: &[BBoard; 64],
+) -> ([BBoard; 64], [BBoard; 64]) {
     let mut r_bishop = [0; 64];
     let mut r_rook = [0; 64];
 
@@ -87,7 +90,6 @@ fn inner_bits(bishop_moves: &[BBoard; 64], rook_moves: &[BBoard; 64]) -> ([BBoar
     (r_bishop, r_rook)
 }
 
-
 fn generate_moves(func: &dyn Fn(u8) -> BBoard) -> [BBoard; 64] {
     let mut result: [BBoard; 64] = [0u64; 64];
 
@@ -100,7 +102,7 @@ fn generate_moves(func: &dyn Fn(u8) -> BBoard) -> [BBoard; 64] {
 
 fn black_pawn_move(idx: u8) -> BBoard {
     if idx < 8 {
-       return 0u64;
+        return 0u64;
     }
     let mut result = 1u64 << (idx - 8) as u64;
 
@@ -160,7 +162,6 @@ fn white_pawn_capture(idx: u8) -> BBoard {
 }
 
 fn rook_move(idx: u8) -> BBoard {
-
     let x1 = idx % 8;
     let y1 = idx / 8;
 
@@ -168,7 +169,7 @@ fn rook_move(idx: u8) -> BBoard {
 
     for i in 0..64 {
         if idx == i {
-            continue
+            continue;
         }
 
         let x2 = i % 8;
@@ -183,7 +184,6 @@ fn rook_move(idx: u8) -> BBoard {
 }
 
 fn bishop_move(idx: u8) -> BBoard {
-
     let x1 = (idx % 8) as i32;
     let y1 = (idx / 8) as i32;
 
@@ -191,7 +191,7 @@ fn bishop_move(idx: u8) -> BBoard {
 
     for i in 0..64 {
         if idx == i {
-            continue
+            continue;
         }
 
         let x2 = (i % 8) as i32;
@@ -205,9 +205,7 @@ fn bishop_move(idx: u8) -> BBoard {
     result
 }
 
-
 fn queen_move(idx: u8) -> BBoard {
-
     let x1 = (idx % 8) as i32;
     let y1 = (idx / 8) as i32;
 
@@ -215,7 +213,7 @@ fn queen_move(idx: u8) -> BBoard {
 
     for i in 0..64 {
         if idx == i {
-            continue
+            continue;
         }
 
         let x2 = (i % 8) as i32;
@@ -229,9 +227,7 @@ fn queen_move(idx: u8) -> BBoard {
     result
 }
 
-
 fn king_move(idx: u8) -> BBoard {
-
     let x1 = (idx % 8) as i32;
     let y1 = (idx / 8) as i32;
 
@@ -239,7 +235,7 @@ fn king_move(idx: u8) -> BBoard {
 
     for i in 0..64 {
         if idx == i {
-            continue
+            continue;
         }
 
         let x2 = (i % 8) as i32;
@@ -248,7 +244,7 @@ fn king_move(idx: u8) -> BBoard {
         let dx = (x1 - x2).abs();
         let dy = (y1 - y2).abs();
 
-        if dx < 2 && dy < 2  {
+        if dx < 2 && dy < 2 {
             result |= 1u64 << i as u64
         }
     }
@@ -256,9 +252,7 @@ fn king_move(idx: u8) -> BBoard {
     result
 }
 
-
 fn knight_move(idx: u8) -> BBoard {
-
     let x1 = (idx % 8) as i32;
     let y1 = (idx / 8) as i32;
 
@@ -266,7 +260,7 @@ fn knight_move(idx: u8) -> BBoard {
 
     for i in 0..64 {
         if idx == i {
-            continue
+            continue;
         }
 
         let x2 = (i % 8) as i32;

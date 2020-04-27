@@ -1,8 +1,11 @@
+use std::fmt;
+use std::fmt::Formatter;
 
 use crate::bboard::*;
 use crate::common::{add_bit, castle_tuple_k_r_e_na_km_rm, update_castles};
 use crate::debug::Demo;
-use std::fmt::Formatter;
+use crate::game_setup::{ChessCoord, ChessMove};
+use crate::messaging::send_message;
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 pub enum Piece {
@@ -14,7 +17,14 @@ pub enum Piece {
     Queen,
 }
 
-pub static PIECES: [Piece; 6] = [Piece::King, Piece::Pawn, Piece::Rook, Piece::Knight,Piece::Bishop, Piece::Queen];
+pub static PIECES: [Piece; 6] = [
+    Piece::King,
+    Piece::Pawn,
+    Piece::Rook,
+    Piece::Knight,
+    Piece::Bishop,
+    Piece::Queen,
+];
 
 impl Piece {
     pub fn values() -> &'static [Piece; 6] {
@@ -39,50 +49,42 @@ impl Piece {
 
     pub fn to_string(&self, side: Side) -> String {
         match side {
-            Side::White => {
-                match self {
-                    Piece::Pawn=> "Pawn".to_string(),
-                    Piece::Rook => "Rook".to_string(),
-                    Piece::Knight=> "Knight".to_string(),
-                    Piece::Bishop=> "Bishop".to_string(),
-                    Piece::Queen => "Queen".to_string(),
-                    Piece::King => "King".to_string(),
-                }
-            }
-            Side::Black => {
-                match self {
-                    Piece::Pawn=> "pawn".to_string(),
-                    Piece::Rook => "rook".to_string(),
-                    Piece::Knight=> "knight".to_string(),
-                    Piece::Bishop=> "bishop".to_string(),
-                    Piece::Queen => "queen".to_string(),
-                    Piece::King => "king".to_string(),
-                }
-            }
+            Side::White => match self {
+                Piece::Pawn => "Pawn".to_string(),
+                Piece::Rook => "Rook".to_string(),
+                Piece::Knight => "Knight".to_string(),
+                Piece::Bishop => "Bishop".to_string(),
+                Piece::Queen => "Queen".to_string(),
+                Piece::King => "King".to_string(),
+            },
+            Side::Black => match self {
+                Piece::Pawn => "pawn".to_string(),
+                Piece::Rook => "rook".to_string(),
+                Piece::Knight => "knight".to_string(),
+                Piece::Bishop => "bishop".to_string(),
+                Piece::Queen => "queen".to_string(),
+                Piece::King => "king".to_string(),
+            },
         }
     }
     pub fn to_char(&self, side: Side) -> char {
         match side {
-            Side::White => {
-                match self {
-                    Piece::Pawn=> 'P',
-                    Piece::Rook => 'R',
-                    Piece::Knight=> 'N',
-                    Piece::Bishop=> 'B',
-                    Piece::Queen => 'Q',
-                    Piece::King => 'K',
-                }
-            }
-            Side::Black => {
-                match self {
-                    Piece::Pawn => 'p',
-                    Piece::Rook => 'r',
-                    Piece::Knight => 'n',
-                    Piece::Bishop => 'b',
-                    Piece::Queen => 'q',
-                    Piece::King => 'k',
-                }
-            }
+            Side::White => match self {
+                Piece::Pawn => 'P',
+                Piece::Rook => 'R',
+                Piece::Knight => 'N',
+                Piece::Bishop => 'B',
+                Piece::Queen => 'Q',
+                Piece::King => 'K',
+            },
+            Side::Black => match self {
+                Piece::Pawn => 'p',
+                Piece::Rook => 'r',
+                Piece::Knight => 'n',
+                Piece::Bishop => 'b',
+                Piece::Queen => 'q',
+                Piece::King => 'k',
+            },
         }
     }
 
@@ -100,7 +102,7 @@ impl Piece {
             b'b' => (Piece::Bishop, Side::Black),
             b'q' => (Piece::Queen, Side::Black),
             b'k' => (Piece::King, Side::Black),
-            _ => panic!()
+            _ => panic!(),
         }
     }
 }
@@ -136,7 +138,7 @@ impl Side {
         match c {
             b'w' => Side::White,
             b'b' => Side::Black,
-            _ => panic!("Unknown side character {}", c as char)
+            _ => panic!("Unknown side character {}", c as char),
         }
     }
 
@@ -148,15 +150,9 @@ impl Side {
     }
 }
 
-use std::fmt;
-use crate::game_setup::{ChessMove, ChessCoord};
-use crate::messaging::send_message;
-
-
 impl fmt::Display for Side {
-
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f,"{}", self.to_char())
+        write!(f, "{}", self.to_char())
     }
 }
 
@@ -325,23 +321,15 @@ impl ChessState {
 
     pub fn get_mut_board(&mut self, coord: &(Piece, Side)) -> &mut BBoard {
         match coord.1 {
-            Side::White => {
-                self.white_state.get_mut_board(coord.0)
-            },
-            Side::Black => {
-                self.black_state.get_mut_board(coord.0)
-            }
+            Side::White => self.white_state.get_mut_board(coord.0),
+            Side::Black => self.black_state.get_mut_board(coord.0),
         }
     }
 
     pub fn get_board(&self, coord: &(Piece, Side)) -> BBoard {
         match coord.1 {
-            Side::White => {
-                self.white_state.get_board(coord.0)
-            },
-            Side::Black => {
-                self.black_state.get_board(coord.0)
-            }
+            Side::White => self.white_state.get_board(coord.0),
+            Side::Black => self.black_state.get_board(coord.0),
         }
     }
 
@@ -356,12 +344,10 @@ impl ChessState {
     }
 
     pub fn to_fen(&self) -> String {
-
         let mut board = ['.'; 64];
 
         for piece in Piece::values().iter() {
             for side in [Side::White, Side::Black].iter() {
-
                 let coord = (*piece, *side);
                 let bit_board = self.get_board(&coord);
 
@@ -385,7 +371,7 @@ impl ChessState {
                 if board[idx] == '.' {
                     count += 1;
                     continue;
-                } else if count > 0  {
+                } else if count > 0 {
                     result.push((count + b'0') as char);
                     count = 0;
                 }
@@ -393,7 +379,7 @@ impl ChessState {
                 result.push(board[idx]);
             }
 
-            if count > 0  {
+            if count > 0 {
                 result.push((count + b'0') as char);
             }
             count = 0;
@@ -403,13 +389,22 @@ impl ChessState {
             }
         }
 
-        result.push_str(format!(" {} {} {} {} {}", self.next_to_move, self.castle_string(), self.en_passant_string(), self.half_move_count, self.full_move_count).as_str());
+        result.push_str(
+            format!(
+                " {} {} {} {} {}",
+                self.next_to_move,
+                self.castle_string(),
+                self.en_passant_string(),
+                self.half_move_count,
+                self.full_move_count
+            )
+            .as_str(),
+        );
 
         result
     }
 
     pub fn castle_string(&self) -> String {
-
         // get castle string
         let mut castle = String::from("");
 
@@ -437,17 +432,14 @@ impl ChessState {
     }
 
     pub fn from_fen(fen: &str) -> ChessState {
-
         let mut state = ChessState::new_empty();
 
         let split: Vec<&str> = fen.trim().split(" ").collect();
 
         if let Some(board) = split.get(0) {
-
             // parse board pieces
             let mut idx = 0u32;
             for c in board.as_bytes() {
-
                 if idx > 63 {
                     panic!();
                 }
@@ -491,9 +483,12 @@ impl ChessState {
                 }
             }
 
-            state.get_mut_side_state(Side::White).set_castle_state((wk, wq));
-            state.get_mut_side_state(Side::Black).set_castle_state((bk, bq));
-
+            state
+                .get_mut_side_state(Side::White)
+                .set_castle_state((wk, wq));
+            state
+                .get_mut_side_state(Side::Black)
+                .set_castle_state((bk, bq));
         }
 
         if let Some(en_passant) = split.get(3) {
@@ -522,7 +517,6 @@ impl ChessState {
     }
 
     pub fn get_move(&self, new_state: &ChessState) -> ChessMove {
-
         let next_to_move = self.next_to_move;
 
         let old_this = self.get_side_state(next_to_move);
@@ -551,13 +545,12 @@ impl ChessState {
             }
 
             if delta.count_ones() > 0 {
-
                 if old_board & delta > 0 {
                     move_from = old_board & delta;
                     role = Some(*p);
                 }
 
-                if new_board & delta > 0  {
+                if new_board & delta > 0 {
                     move_to = new_board & delta;
                     promote_to = Some(*p);
                 }
@@ -588,14 +581,14 @@ impl ChessState {
         }
 
         if is_castle {
-
             let castle_side = if move_from > move_to {
                 Piece::King
             } else {
                 Piece::Queen
             };
 
-            let (king_from, rook_from, _, _, king_move, rook_move) = castle_tuple_k_r_e_na_km_rm(next_to_move, castle_side);
+            let (king_from, rook_from, _, _, king_move, rook_move) =
+                castle_tuple_k_r_e_na_km_rm(next_to_move, castle_side);
 
             let king_to = king_from ^ king_move;
             let rook_to = rook_from ^ rook_move;
@@ -608,14 +601,12 @@ impl ChessState {
                 rook_to: ChessCoord::from_bboard(rook_to),
             };
 
-
-            return result
+            return result;
         }
 
         let role = role.unwrap();
 
         if role == Piece::Pawn && move_to == self.en_passant {
-
             let captured = if self.en_passant < 1u64 << 32 {
                 self.en_passant << 8u64
             } else {
@@ -627,7 +618,7 @@ impl ChessState {
                 move_from: ChessCoord::from_bboard(move_from),
                 move_to: ChessCoord::from_bboard(move_to),
                 captured: ChessCoord::from_bboard(captured),
-            }
+            };
         }
 
         ChessMove::Normal {
@@ -636,24 +627,32 @@ impl ChessState {
             move_from: ChessCoord::from_bboard(move_from),
             move_to: ChessCoord::from_bboard(move_to),
             promote: promote_to,
-            capture: captured
+            capture: captured,
         }
     }
 
     /// Mutate object state to a new value based on a move provided
     pub fn do_move(&mut self, chess_move: &ChessMove) {
-
         let mut new_state = self.init_next_move();
 
         match chess_move {
-            ChessMove::Normal { side, role, move_from, move_to, promote, capture } => {
-
-                if *role == Piece::Pawn || capture.is_some(){
+            ChessMove::Normal {
+                side,
+                role,
+                move_from,
+                move_to,
+                promote,
+                capture,
+            } => {
+                if *role == Piece::Pawn || capture.is_some() {
                     new_state.half_move_count = 0;
                 }
 
-                if *role == Piece::Pawn && ((*move_from).y + 2 == (*move_to).y || (*move_from).y == (*move_to).y + 2) {
-                    new_state.en_passant = bb_coord((*move_from).x, ((*move_from).y + (*move_to).y) / 2);
+                if *role == Piece::Pawn
+                    && ((*move_from).y + 2 == (*move_to).y || (*move_from).y == (*move_to).y + 2)
+                {
+                    new_state.en_passant =
+                        bb_coord((*move_from).x, ((*move_from).y + (*move_to).y) / 2);
                 }
 
                 let (mut side1, mut side2) = new_state.get_mut_sides_state(*side);
@@ -680,10 +679,14 @@ impl ChessState {
 
                 side1.all &= !move_from.as_bboard();
                 side1.all |= move_to.as_bboard();
-
             }
-            ChessMove::Castle { side, king_from, king_to, rook_from, rook_to } => {
-
+            ChessMove::Castle {
+                side,
+                king_from,
+                king_to,
+                rook_from,
+                rook_to,
+            } => {
                 let (mut side1, _) = new_state.get_mut_sides_state(*side);
 
                 let delta_king = king_from.as_bboard() | king_to.as_bboard();
@@ -691,10 +694,13 @@ impl ChessState {
                 *side1.get_mut_board(Piece::King) ^= delta_king;
                 *side1.get_mut_board(Piece::Rook) ^= delta_rook;
                 side1.all ^= delta_king | delta_rook;
-
-            },
-            ChessMove::EnPassantCapture { side, move_from, move_to, captured } => {
-
+            }
+            ChessMove::EnPassantCapture {
+                side,
+                move_from,
+                move_to,
+                captured,
+            } => {
                 new_state.half_move_count = 0;
                 let (mut side1, mut side2) = new_state.get_mut_sides_state(*side);
                 let pawns1: &mut BBoard = side1.get_mut_board(Piece::Pawn);
@@ -707,18 +713,17 @@ impl ChessState {
                 side1.all ^= delta_pawn;
                 *pawns2 ^= pawn_capture;
                 side2.all ^= pawn_capture;
-            },
+            }
         }
 
-        update_castles(&mut new_state,  self.next_to_move);
-        update_castles(&mut new_state,  self.next_to_move.opposite());
+        update_castles(&mut new_state, self.next_to_move);
+        update_castles(&mut new_state, self.next_to_move.opposite());
 
         *self = new_state;
     }
 }
 
 impl Demo for ChessState {
-
     fn demo(&self) {
         println!("{}", self.to_fen());
 
@@ -726,7 +731,6 @@ impl Demo for ChessState {
 
         for piece in Piece::values().iter() {
             for side in [Side::White, Side::Black].iter() {
-
                 let coord = (*piece, *side);
                 let board = self.get_board(&coord);
 
@@ -735,7 +739,10 @@ impl Demo for ChessState {
                 for i in 0..64 {
                     if (board >> i) & 1 == 1 {
                         if result[i] != '.' {
-                            println!("board conflict between {} and {} at index {}", result[i], c, i);
+                            println!(
+                                "board conflict between {} and {} at index {}",
+                                result[i], c, i
+                            );
                         }
                         result[i] = c;
                     }
@@ -753,7 +760,12 @@ impl Demo for ChessState {
             println!();
         }
 
-        println!("{} {} {}\n", self.next_to_move, self.castle_string(), self.en_passant_string());
+        println!(
+            "{} {} {}\n",
+            self.next_to_move,
+            self.castle_string(),
+            self.en_passant_string()
+        );
     }
 }
 
@@ -764,12 +776,18 @@ mod tests {
     #[test]
     fn test_equal_states() {
         let state1 = ChessState::new_game();
-        let state2 = ChessState::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-        let state3 = ChessState::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w Qkq - 0 1");
-        let state4 = ChessState::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1");
-        let state5 = ChessState::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPP1/RNBQKBNR w KQkq - 0 1");
-        let state6 = ChessState::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq a3 0 1");
-        let state7 = ChessState::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 2");
+        let state2 =
+            ChessState::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+        let state3 =
+            ChessState::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w Qkq - 0 1");
+        let state4 =
+            ChessState::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1");
+        let state5 =
+            ChessState::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPP1/RNBQKBNR w KQkq - 0 1");
+        let state6 =
+            ChessState::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq a3 0 1");
+        let state7 =
+            ChessState::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 2");
 
         assert_eq!(state1, state2);
         assert_ne!(state2, state3);
@@ -794,7 +812,6 @@ mod tests {
         let b = side1.get_mut_board(Piece::Pawn);
         assert_eq!(*b, 1u64);
     }
-
 
     #[test]
     fn test_enum_index() {

@@ -9,12 +9,11 @@ pub trait Demo {
 }
 
 impl AsString for BBoard {
-
     fn as_string(&self) -> String {
         let mut result = String::new();
 
         for i in 0..8 {
-            let b: u8 = ((*self >> (7 - i) * 8 ) & 255) as u8;
+            let b: u8 = ((*self >> (7 - i) * 8) & 255) as u8;
 
             result.push_str(format!("{:08b}\n", b.reverse_bits()).as_str());
         }

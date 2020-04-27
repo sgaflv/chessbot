@@ -1,10 +1,11 @@
-use crate::state::{ChessState, Side, Piece};
-use crate::bboard::BBoard;
-use crate::engine::ChessEngine;
-use std::collections::{HashMap};
-use std::result::Result;
-use crate::common::castle_tuple_k_r_e_na_km_rm;
+use std::collections::HashMap;
 use std::num::Wrapping;
+use std::result::Result;
+
+use crate::bboard::BBoard;
+use crate::common::castle_tuple_k_r_e_na_km_rm;
+use crate::engine::ChessEngine;
+use crate::state::{ChessState, Piece, Side};
 
 #[derive(Eq, PartialEq, Debug, Clone, Copy)]
 pub struct ChessCoord {
@@ -14,20 +15,14 @@ pub struct ChessCoord {
 
 impl ChessCoord {
     pub fn new(x: u8, y: u8) -> ChessCoord {
-
-        ChessCoord {
-            x, y
-        }
+        ChessCoord { x, y }
     }
 
     pub fn from_string(coord: &[u8]) -> ChessCoord {
-
         let x = coord[0] - b'a';
         let y = coord[1] - b'1';
 
-        ChessCoord {
-            x, y
-        }
+        ChessCoord { x, y }
     }
 
     pub fn to_string(&self) -> String {
@@ -40,7 +35,6 @@ impl ChessCoord {
 
     #[inline]
     pub fn as_bboard(&self) -> BBoard {
-
         1u64 << self.idx() as u64
     }
 
@@ -66,9 +60,27 @@ impl ChessCoord {
 
 #[derive(Eq, PartialEq, Debug, Clone, Copy)]
 pub enum ChessMove {
-    Normal {side: Side, role: Piece, move_from: ChessCoord, move_to: ChessCoord, promote: Option<Piece>, capture: Option<Piece>},
-    Castle {side: Side, king_from: ChessCoord, king_to: ChessCoord, rook_from: ChessCoord, rook_to: ChessCoord},
-    EnPassantCapture {side: Side, move_from: ChessCoord, move_to: ChessCoord, captured: ChessCoord},
+    Normal {
+        side: Side,
+        role: Piece,
+        move_from: ChessCoord,
+        move_to: ChessCoord,
+        promote: Option<Piece>,
+        capture: Option<Piece>,
+    },
+    Castle {
+        side: Side,
+        king_from: ChessCoord,
+        king_to: ChessCoord,
+        rook_from: ChessCoord,
+        rook_to: ChessCoord,
+    },
+    EnPassantCapture {
+        side: Side,
+        move_from: ChessCoord,
+        move_to: ChessCoord,
+        captured: ChessCoord,
+    },
 }
 
 impl ChessMove {
@@ -102,12 +114,11 @@ impl ChessMove {
             if own_board > 0 {
                 role = Some(*p);
 
-                if *p == Piece::King &&
-                    (Wrapping(move_to_b) << 2 == Wrapping(move_from_b) ||
-                        Wrapping(move_to_b) >> 2 == Wrapping(move_from_b))  {
-
+                if *p == Piece::King
+                    && (Wrapping(move_to_b) << 2 == Wrapping(move_from_b)
+                        || Wrapping(move_to_b) >> 2 == Wrapping(move_from_b))
+                {
                     is_castle = true;
-
                 }
             }
 
@@ -125,7 +136,6 @@ impl ChessMove {
         let role = role.unwrap();
 
         if role == Piece::Pawn && move_to_b == curr_state.en_passant {
-
             let captured = if curr_state.en_passant < 1u64 << 32 {
                 curr_state.en_passant << 8u64
             } else {
@@ -140,16 +150,15 @@ impl ChessMove {
             });
         }
 
-
         if is_castle {
-
             let castle_side = if move_from_b < move_to_b {
                 Piece::King
             } else {
                 Piece::Queen
             };
 
-            let (king_from, rook_from, _, _, king_move, rook_move) = castle_tuple_k_r_e_na_km_rm(side, castle_side);
+            let (king_from, rook_from, _, _, king_move, rook_move) =
+                castle_tuple_k_r_e_na_km_rm(side, castle_side);
 
             let king_to = king_from ^ king_move;
             let rook_to = rook_from ^ rook_move;
@@ -177,18 +186,31 @@ impl ChessMove {
         let mut result = String::with_capacity(4);
 
         match self {
-            ChessMove::Normal{ move_from: from, move_to: to, promote, ..} => {
+            ChessMove::Normal {
+                move_from: from,
+                move_to: to,
+                promote,
+                ..
+            } => {
                 result.push_str(from.to_string().as_str());
                 result.push_str(to.to_string().as_str());
                 if let Some(promoted) = promote {
                     result.push(promoted.to_char(Side::Black));
                 }
             }
-            ChessMove::Castle { king_from: from, king_to: to, ..} => {
+            ChessMove::Castle {
+                king_from: from,
+                king_to: to,
+                ..
+            } => {
                 result.push_str(from.to_string().as_str());
                 result.push_str(to.to_string().as_str());
             }
-            ChessMove::EnPassantCapture { move_from: from, move_to: to, .. } => {
+            ChessMove::EnPassantCapture {
+                move_from: from,
+                move_to: to,
+                ..
+            } => {
                 result.push_str(from.to_string().as_str());
                 result.push_str(to.to_string().as_str());
             }
@@ -216,7 +238,6 @@ pub struct GameSetup {
 }
 
 impl GameSetup {
-
     pub fn new() -> GameSetup {
         let mut result = GameSetup {
             xboard: false,

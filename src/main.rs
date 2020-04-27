@@ -2,30 +2,34 @@
 extern crate log;
 extern crate simplelog;
 
-pub mod bboard;
-pub mod state;
-pub mod debug;
-pub mod evaluator;
-pub mod common;
-pub mod magic;
-pub mod move_generator;
-pub mod messaging;
-pub mod piece_moves;
-pub mod game_setup;
-pub mod engine;
-
-use state::*;
-use crate::messaging::{get_message, send_message};
-use crate::game_setup::{GameSetup, ChessMove};
-use simplelog::{CombinedLogger, WriteLogger, LevelFilter, Config};
 use std::fs::File;
 
+use simplelog::{CombinedLogger, Config, LevelFilter, WriteLogger};
+
+use state::*;
+
+use crate::game_setup::{ChessMove, GameSetup};
+use crate::messaging::{get_message, send_message};
+
+pub mod bboard;
+pub mod common;
+pub mod debug;
+pub mod engine;
+pub mod evaluator;
+pub mod game_setup;
+pub mod magic;
+pub mod messaging;
+pub mod move_generator;
+pub mod piece_moves;
+pub mod state;
+
 fn main() {
-    CombinedLogger::init(
-        vec![
-            WriteLogger::new(LevelFilter::Info, Config::default(), File::create("chess.log").unwrap()),
-        ]
-    ).unwrap();
+    CombinedLogger::init(vec![WriteLogger::new(
+        LevelFilter::Info,
+        Config::default(),
+        File::create("chess.log").unwrap(),
+    )])
+    .unwrap();
 
     let mut setup = GameSetup::new();
 
@@ -86,7 +90,7 @@ fn main() {
                 get_message();
 
                 send_message("");
-            },
+            }
 
             "hard" => {
                 setup.pondering = true;
@@ -131,44 +135,48 @@ fn main() {
             }
 
             "usermove" => {
-
                 let user_move = ChessMove::parse(argument, &setup.game_state);
 
                 match user_move {
                     Ok(user_move) => {
-                        setup.computer_player.insert(setup.game_state.next_to_move, false);
+                        setup
+                            .computer_player
+                            .insert(setup.game_state.next_to_move, false);
 
                         setup.game_state.do_move(&user_move);
 
                         // now computer moves as the opposite color
-                        setup.computer_player.insert(setup.game_state.next_to_move, true);
+                        setup
+                            .computer_player
+                            .insert(setup.game_state.next_to_move, true);
 
                         setup.forced = false;
                         info!("parsed user move {:?}", user_move);
-
-                    },
+                    }
                     Err(msg) => {
-                        error!("error making move {} on board: {}", argument, setup.game_state.to_fen());
+                        error!(
+                            "error making move {} on board: {}",
+                            argument,
+                            setup.game_state.to_fen()
+                        );
                         error!("{}", msg);
 
                         setup.forced = true;
-
                     }
                 }
             }
 
             "go" => {
-
                 match setup.game_state.next_to_move {
                     Side::White => {
                         send_message("# received 'go', playing as white\n");
-                    },
-                    Side::Black => {
-                        send_message("# received 'go', playing as black\n")
-                    },
+                    }
+                    Side::Black => send_message("# received 'go', playing as black\n"),
                 };
 
-                setup.computer_player.insert(setup.game_state.next_to_move, true);
+                setup
+                    .computer_player
+                    .insert(setup.game_state.next_to_move, true);
                 setup.forced = false;
             }
 
@@ -182,13 +190,16 @@ fn main() {
         }
 
         if setup.forced {
-            continue
+            continue;
         }
 
-        let do_move = setup.computer_player.get(&setup.game_state.next_to_move).unwrap();
+        let do_move = setup
+            .computer_player
+            .get(&setup.game_state.next_to_move)
+            .unwrap();
 
         if !do_move {
-            continue
+            continue;
         }
 
         let next_move = setup.engine.find_best_move(&setup.game_state);
@@ -201,7 +212,10 @@ fn main() {
 
         let next_move = next_move.unwrap();
 
-        info!("computer moves as {:?}: {:?}", setup.game_state.next_to_move, next_move);
+        info!(
+            "computer moves as {:?}: {:?}",
+            setup.game_state.next_to_move, next_move
+        );
 
         send_message(format!("move {}", next_move.to_string()).as_str());
 

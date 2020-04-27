@@ -1,15 +1,13 @@
+use crate::evaluator::evaluate_position;
 use crate::game_setup::ChessMove;
 use crate::move_generator::MoveGenerator;
 use crate::state::{ChessState, Side};
-use crate::evaluator::evaluate_position;
-use crate::messaging::send_message;
 
 pub struct ChessEngine {
     move_generator: MoveGenerator,
 }
 
 impl ChessEngine {
-
     pub fn new() -> ChessEngine {
         ChessEngine {
             move_generator: MoveGenerator::new(),
@@ -34,7 +32,7 @@ impl ChessEngine {
             } else {
                 // draw
                 0
-            }
+            };
         }
 
         let mut best_score = -1;
@@ -42,16 +40,14 @@ impl ChessEngine {
         for (idx, cur_state) in moves.iter().enumerate() {
             let score = self.min_max_search(penalty + 1, depth - 1, cur_state);
 
-
-            let is_new_best = idx == 0 ||
-                state.next_to_move == Side::White && score > best_score ||
-                state.next_to_move == Side::Black && score < best_score;
+            let is_new_best = idx == 0
+                || state.next_to_move == Side::White && score > best_score
+                || state.next_to_move == Side::Black && score < best_score;
 
             if is_new_best {
                 best_score = score;
                 continue;
             }
-
         }
 
         best_score
@@ -79,9 +75,9 @@ impl ChessEngine {
                 max = score;
             }
 
-            let is_new_best = idx == 0 ||
-                state.next_to_move == Side::White && score > best_score ||
-                state.next_to_move == Side::Black && score < best_score;
+            let is_new_best = idx == 0
+                || state.next_to_move == Side::White && score > best_score
+                || state.next_to_move == Side::Black && score < best_score;
 
             if is_new_best {
                 best_score = score;

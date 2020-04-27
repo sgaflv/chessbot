@@ -1,9 +1,10 @@
-use crate::bboard::{BBoard, bb_coord_q, bb_get_q, last_bit};
-use crate::piece_moves::PieceMoveProvider;
-use std::rc::Rc;
 use std::num::Wrapping;
+use std::rc::Rc;
 
 use arr_macro::arr;
+
+use crate::bboard::{bb_coord_q, bb_get_q, BBoard, last_bit};
+use crate::piece_moves::PieceMoveProvider;
 
 pub struct Magic {
     move_provider: Rc<PieceMoveProvider>,
@@ -19,7 +20,6 @@ pub struct Magic {
 
 impl Magic {
     pub fn new(move_provider: Rc<PieceMoveProvider>) -> Magic {
-
         let mut result = Magic {
             move_provider,
             rook_pop_bits: [
@@ -193,7 +193,8 @@ impl Magic {
     #[inline]
     pub fn get_bishop_attack_bits(&self, idx: usize, board: BBoard) -> BBoard {
         let attack_bits = board & (self.move_provider.inner_bishop_attack_bits[idx]);
-        let index = (Wrapping(attack_bits) * Wrapping(self.bishop_magic[idx])) >> (self.bishop_shift_bits[idx] as usize);
+        let index = (Wrapping(attack_bits) * Wrapping(self.bishop_magic[idx]))
+            >> (self.bishop_shift_bits[idx] as usize);
 
         self.bishop_attack_bits[idx][index.0 as usize]
     }
@@ -201,34 +202,38 @@ impl Magic {
     #[inline]
     pub fn get_rook_attack_bits(&self, idx: usize, board: BBoard) -> BBoard {
         let attack_bits = board & self.move_provider.inner_rook_attack_bits[idx];
-        let index = Wrapping(attack_bits) * Wrapping(self.rook_magic[idx]) >> (self.rook_shift_bits[idx] as usize);
+        let index = Wrapping(attack_bits) * Wrapping(self.rook_magic[idx])
+            >> (self.rook_shift_bits[idx] as usize);
 
         self.rook_attack_bits[idx][index.0 as usize]
     }
 
     fn init_magic(&mut self) {
-
         init_rq_magic(
             &self.rook_shift_bits,
             &self.move_provider.inner_rook_attack_bits,
             &self.rook_magic,
             &mut self.rook_attack_bits,
-            &compute_rook_attack_bits
-            );
+            &compute_rook_attack_bits,
+        );
 
         init_rq_magic(
             &self.bishop_shift_bits,
             &self.move_provider.inner_bishop_attack_bits,
             &self.bishop_magic,
             &mut self.bishop_attack_bits,
-            &compute_bishop_attack_bits
+            &compute_bishop_attack_bits,
         );
     }
-
-
 }
 
-fn init_rq_magic(shift_bits: &[i32; 64], inner_attack_bits: &[BBoard; 64], magic: &[u64; 64], result_attack_bits: &mut [Vec<BBoard>; 64], attack_function: &dyn Fn(i32, i32, BBoard) -> BBoard ) {
+fn init_rq_magic(
+    shift_bits: &[i32; 64],
+    inner_attack_bits: &[BBoard; 64],
+    magic: &[u64; 64],
+    result_attack_bits: &mut [Vec<BBoard>; 64],
+    attack_function: &dyn Fn(i32, i32, BBoard) -> BBoard,
+) {
     // init attack bits
     for y in 0i32..8 {
         for x in 0i32..8 {
@@ -318,4 +323,3 @@ fn compute_bishop_attack_bits(x: i32, y: i32, field: BBoard) -> BBoard {
 
     attack
 }
-
